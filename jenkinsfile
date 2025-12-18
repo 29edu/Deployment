@@ -71,12 +71,12 @@ pipeline {
                 script {
                     docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
                         // Pubat backend
-                        bat "docker pubat ${BACKEND_IMAGE}:${BUILD_TAG}"
-                        bat "docker pubat ${BACKEND_IMAGE}:latest"
+                        bat "docker push ${BACKEND_IMAGE}:${BUILD_TAG}"
+                        bat "docker push ${BACKEND_IMAGE}:latest"
                         
                         // Pubat frontend
-                        bat "docker pubat ${FRONTEND_IMAGE}:${BUILD_TAG}"
-                        bat "docker pubat ${FRONTEND_IMAGE}:latest"
+                        bat "docker push ${FRONTEND_IMAGE}:${BUILD_TAG}"
+                        bat "docker push ${FRONTEND_IMAGE}:latest"
                     }
                 }
             }
