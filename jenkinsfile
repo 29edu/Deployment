@@ -44,10 +44,8 @@ pipeline {
                     steps {
                         echo '🐳 Building backend Docker image...'
                         dir('backend') {
-                            script {
-                                backendImage = docker.build("${BACKEND_IMAGE}:${BUILD_TAG}")
-                                docker.build("${BACKEND_IMAGE}:latest")
-                            }
+                            bat "docker build -t ${BACKEND_IMAGE}:${BUILD_TAG} ."
+                            bat "docker build -t ${BACKEND_IMAGE}:latest ."
                         }
                     }
                 }
@@ -55,10 +53,8 @@ pipeline {
                     steps {
                         echo '🐳 Building frontend Docker image...'
                         dir('frontend') {
-                            script {
-                                frontendImage = docker.build("${FRONTEND_IMAGE}:${BUILD_TAG}")
-                                docker.build("${FRONTEND_IMAGE}:latest")
-                            }
+                            bat "docker build -t ${FRONTEND_IMAGE}:${BUILD_TAG} ."
+                            bat "docker build -t ${FRONTEND_IMAGE}:latest ."
                         }
                     }
                 }
@@ -68,16 +64,14 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 echo '📤 Pushing Docker images to Docker Hub...'
-                script {
-                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
-                        // Push backend
-                        bat "docker push ${BACKEND_IMAGE}:${BUILD_TAG}"
-                        bat "docker push ${BACKEND_IMAGE}:latest"
-                        
-                        // Push frontend
-                        bat "docker push ${FRONTEND_IMAGE}:${BUILD_TAG}"
-                        bat "docker push ${FRONTEND_IMAGE}:latest"
-                    }
+                withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    bat """
+                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                        docker push ${BACKEND_IMAGE}:${BUILD_TAG}
+                        docker push ${BACKEND_IMAGE}:latest
+                        docker push ${FRONTEND_IMAGE}:${BUILD_TAG}
+                        docker push ${FRONTEND_IMAGE}:latest
+                    """
                 }
             }
         }
