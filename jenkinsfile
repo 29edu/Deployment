@@ -65,16 +65,16 @@ pipeline {
             }
         }
         
-        stage('Pubat to Docker Hub') {
+        stage('Push to Docker Hub') {
             steps {
-                echo '📤 Pubating Docker images to Docker Hub...'
+                echo '📤 Pushing Docker images to Docker Hub...'
                 script {
                     docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
-                        // Pubat backend
+                        // Push backend
                         bat "docker push ${BACKEND_IMAGE}:${BUILD_TAG}"
                         bat "docker push ${BACKEND_IMAGE}:latest"
                         
-                        // Pubat frontend
+                        // Push frontend
                         bat "docker push ${FRONTEND_IMAGE}:${BUILD_TAG}"
                         bat "docker push ${FRONTEND_IMAGE}:latest"
                     }

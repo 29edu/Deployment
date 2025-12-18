@@ -17,7 +17,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Serve with Nginx
-FROM nginx:alpine
+FROM nginx:1.25-alpine
 
 # Copy nginx configuration for local development (uses "backend" service name)
 COPY nginx.local.conf /etc/nginx/conf.d/default.conf
