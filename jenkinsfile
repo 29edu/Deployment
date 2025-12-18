@@ -1,0 +1,138 @@
+pipeline {
+    agent any
+    
+    environment {
+        DOCKERHUB_USERNAME = "YOUR_DOCKERHUB_USERNAME"
+        BACKEND_IMAGE = "${DOCKERHUB_USERNAME}/fullstack-backend"
+        FRONTEND_IMAGE = "${DOCKERHUB_USERNAME}/fullstack-frontend"
+        BUILD_TAG = "${BUILD_NUMBER}"
+        DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
+        KUBECONFIG_CREDENTIALS_ID = 'kubeconfig'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '📦 Checking out code from GitHub...'
+                checkout scm
+            }
+        }
+        
+        stage('Test Backend') {
+            steps {
+                echo '🧪 Testing backend...'
+                dir('backend') {
+                    sh 'npm install'
+                    sh 'npm test'
+                }
+            }
+        }
+        
+        stage('Test Frontend') {
+            steps {
+                echo '🧪 Testing frontend...'
+                dir('frontend') {
+                    sh 'npm install'
+                    sh 'npm test -- --watchAll=false'
+                }
+            }
+        }
+        
+        stage('Build Docker Images') {
+            parallel {
+                stage('Build Backend Image') {
+                    steps {
+                        echo '🐳 Building backend Docker image...'
+                        dir('backend') {
+                            script {
+                                backendImage = docker.build("${BACKEND_IMAGE}:${BUILD_TAG}")
+                                docker.build("${BACKEND_IMAGE}:latest")
+                            }
+                        }
+                    }
+                }
+                stage('Build Frontend Image') {
+                    steps {
+                        echo '🐳 Building frontend Docker image...'
+                        dir('frontend') {
+                            script {
+                                frontendImage = docker.build("${FRONTEND_IMAGE}:${BUILD_TAG}")
+                                docker.build("${FRONTEND_IMAGE}:latest")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Push to Docker Hub') {
+            steps {
+                echo '📤 Pushing Docker images to Docker Hub...'
+                script {
+                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
+                        // Push backend
+                        sh "docker push ${BACKEND_IMAGE}:${BUILD_TAG}"
+                        sh "docker push ${BACKEND_IMAGE}:latest"
+                        
+                        // Push frontend
+                        sh "docker push ${FRONTEND_IMAGE}:${BUILD_TAG}"
+                        sh "docker push ${FRONTEND_IMAGE}:latest"
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Kubernetes') {
+            steps {
+                echo '☸️ Deploying to Kubernetes cluster...'
+                withCredentials([file(credentialsId: KUBECONFIG_CREDENTIALS_ID, variable: 'KUBECONFIG')]) {
+                    sh """
+                        kubectl apply -f k8s/backend.yaml
+                        kubectl apply -f k8s/frontend.yaml
+                        kubectl apply -f k8s/ingress.yaml
+                        
+                        # Wait for rollout
+                        kubectl rollout status deployment/backend-deployment
+                        kubectl rollout status deployment/frontend-deployment
+                    """
+                }
+            }
+        }
+        
+        stage('Verify Deployment') {
+            steps {
+                echo '✅ Verifying deployment...'
+                withCredentials([file(credentialsId: KUBECONFIG_CREDENTIALS_ID, variable: 'KUBECONFIG')]) {
+                    sh """
+                        echo "Backend Pods:"
+                        kubectl get pods -l app=backend
+                        
+                        echo "Frontend Pods:"
+                        kubectl get pods -l app=frontend
+                        
+                        echo "Services:"
+                        kubectl get services
+                        
+                        echo "Ingress:"
+                        kubectl get ingress
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✅ Pipeline completed successfully! 🎉'
+            echo "Backend: ${BACKEND_IMAGE}:${BUILD_TAG}"
+            echo "Frontend: ${FRONTEND_IMAGE}:${BUILD_TAG}"
+        }
+        failure {
+            echo '❌ Pipeline failed! Check the logs above.'
+        }
+        always {
+            echo '🧹 Cleaning up workspace...'
+            cleanWs()
+        }
+    }
+}
