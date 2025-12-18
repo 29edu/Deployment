@@ -22,8 +22,8 @@ pipeline {
             steps {
                 echo '🧪 Testing backend...'
                 dir('backend') {
-                    sh 'npm install'
-                    sh 'npm test'
+                    bat 'npm install'
+                    bat 'npm test'
                 }
             }
         }
@@ -32,8 +32,8 @@ pipeline {
             steps {
                 echo '🧪 Testing frontend...'
                 dir('frontend') {
-                    sh 'npm install'
-                    sh 'npm run lint || echo "Linting completed with warnings"'
+                    bat 'npm install'
+                    bat 'npm run lint || echo "Linting completed with warnings"'
                 }
             }
         }
@@ -65,18 +65,18 @@ pipeline {
             }
         }
         
-        stage('Push to Docker Hub') {
+        stage('Pubat to Docker Hub') {
             steps {
-                echo '📤 Pushing Docker images to Docker Hub...'
+                echo '📤 Pubating Docker images to Docker Hub...'
                 script {
                     docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
-                        // Push backend
-                        sh "docker push ${BACKEND_IMAGE}:${BUILD_TAG}"
-                        sh "docker push ${BACKEND_IMAGE}:latest"
+                        // Pubat backend
+                        bat "docker pubat ${BACKEND_IMAGE}:${BUILD_TAG}"
+                        bat "docker pubat ${BACKEND_IMAGE}:latest"
                         
-                        // Push frontend
-                        sh "docker push ${FRONTEND_IMAGE}:${BUILD_TAG}"
-                        sh "docker push ${FRONTEND_IMAGE}:latest"
+                        // Pubat frontend
+                        bat "docker pubat ${FRONTEND_IMAGE}:${BUILD_TAG}"
+                        bat "docker pubat ${FRONTEND_IMAGE}:latest"
                     }
                 }
             }
@@ -86,7 +86,7 @@ pipeline {
             steps {
                 echo '☸️ Deploying to Kubernetes cluster...'
                 withCredentials([file(credentialsId: KUBECONFIG_CREDENTIALS_ID, variable: 'KUBECONFIG')]) {
-                    sh """
+                    bat """
                         kubectl apply -f k8s/namespace.yaml
                         kubectl apply -f k8s/backend.yml
                         kubectl apply -f k8s/frontend.yml
@@ -104,7 +104,7 @@ pipeline {
             steps {
                 echo '✅ Verifying deployment...'
                 withCredentials([file(credentialsId: KUBECONFIG_CREDENTIALS_ID, variable: 'KUBECONFIG')]) {
-                    sh """
+                    bat """
                         echo "Backend Pods:"
                         kubectl get pods -l app=backend
                         
