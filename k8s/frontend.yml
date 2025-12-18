@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: YOUR_DOCKERHUB_USERNAME/fullstack-frontend:latest
+        image: 29edu/fullstack-frontend:latest
         ports:
         - containerPort: 80
         resources:
